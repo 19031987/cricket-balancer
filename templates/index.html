@@ -206,7 +206,7 @@
     <div id="rateModal" class="modal">
         <div class="modal-content">
             <h3 id="rateTitle">Rate Player</h3>
-            <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 1.2rem;">Ratings are private and used solely for balanced team shuffling.</p>
+            <p id="rateModalSubtitle" style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 1.2rem;">Ratings are private and used solely for balanced team shuffling.</p>
             <form onsubmit="handleRate(event)">
                 <input type="hidden" id="targetPlayerId">
 
@@ -325,6 +325,7 @@
                 const canRate = currentUser && currentUser.role === 'player' && currentUser.id !== p.id;
                 const isAdmin = currentUser && currentUser.role === 'admin';
                 const isAvail = p.is_available !== false;
+                const hasMyRating = p.my_rating !== null && p.my_rating !== undefined;
                 roster.innerHTML += `
                     <div class="p-card" style="border-top: 3px solid ${isAvail ? 'var(--success)' : '#ef476f'};">
                         <div>
@@ -337,6 +338,11 @@
                             <div style="margin: 0.8rem 0; font-size: 0.9rem; color: #94a3b8;">
                                 <div>Username: <code>${p.username}</code></div>
                                 <div>Peer reviews: <strong>${p.rating_count} member(s)</strong></div>
+                                ${hasMyRating ? `
+                                    <div style="margin-top: 0.5rem; font-size: 0.82rem; color: #ffd166; background: #ffd16618; padding: 0.3rem 0.6rem; border-radius: 6px; border: 1px solid #ffd16644;">
+                                        ⭐ <strong>Your Rating:</strong> Bat ${p.my_rating.batting} | Bowl ${p.my_rating.bowling} | Fld ${p.my_rating.fielding}
+                                    </div>
+                                ` : ''}
                             </div>
                             <!-- Availability Action -->
                             <div style="margin: 0.6rem 0; display: flex; align-items: center; justify-content: space-between; background: #0f172a; padding: 0.4rem 0.6rem; border-radius: 6px;">
@@ -348,7 +354,11 @@
                             </div>
                         </div>
                         <div style="margin-top: 0.8rem; display: flex; flex-wrap: wrap; gap: 0.4rem;">
-                            ${canRate ? `<button class="btn-success" onclick="openRateModal(${p.id}, '${p.full_name}')">⭐ Rate</button>` : ''}
+                            ${canRate ? `
+                                <button class="${hasMyRating ? 'btn-accent' : 'btn-success'}" onclick="openRateModal(${p.id}, '${p.full_name}')">
+                                    ${hasMyRating ? '✏️ Edit My Rating' : '⭐ Rate'}
+                                </button>
+                            ` : ''}
                             ${isAdmin ? `
                                 <button class="btn-accent" onclick="openAdminPasswordModal(${p.id}, '${p.full_name}')">🔑 Password</button>
                                 <button class="btn-danger" onclick="deleteMember(${p.id}, '${p.full_name}')">🗑️ Delete</button>
@@ -458,13 +468,29 @@
         function openRateModal(id, name) {
             document.getElementById('targetPlayerId').value = id;
             document.getElementById('rateTitle').innerText = 'Rate ' + name;
-            // Default all rating sliders to zero
-            document.getElementById('batScore').value = 0;
-            document.getElementById('batVal').innerText = '0.0 / 10';
-            document.getElementById('bowlScore').value = 0;
-            document.getElementById('bowlVal').innerText = '0.0 / 10';
-            document.getElementById('fldScore').value = 0;
-            document.getElementById('fldVal').innerText = '0.0 / 10';
+            
+            const player = players.find(p => p.id === id);
+            const sub = document.getElementById('rateModalSubtitle');
+            if (player && player.my_rating) {
+                // Pre-fill sliders with previously submitted ratings
+                const r = player.my_rating;
+                document.getElementById('batScore').value = r.batting;
+                document.getElementById('batVal').innerText = parseFloat(r.batting).toFixed(1) + ' / 10';
+                document.getElementById('bowlScore').value = r.bowling;
+                document.getElementById('bowlVal').innerText = parseFloat(r.bowling).toFixed(1) + ' / 10';
+                document.getElementById('fldScore').value = r.fielding;
+                document.getElementById('fldVal').innerText = parseFloat(r.fielding).toFixed(1) + ' / 10';
+                if (sub) sub.innerHTML = `✏️ Showing the rating you previously provided for <strong>${name}</strong>:`;
+            } else {
+                // Default all rating sliders to zero
+                document.getElementById('batScore').value = 0;
+                document.getElementById('batVal').innerText = '0.0 / 10';
+                document.getElementById('bowlScore').value = 0;
+                document.getElementById('bowlVal').innerText = '0.0 / 10';
+                document.getElementById('fldScore').value = 0;
+                document.getElementById('fldVal').innerText = '0.0 / 10';
+                if (sub) sub.innerText = 'Ratings are private and used solely for balanced team shuffling.';
+            }
             toggleModal('rateModal', true);
         }
 

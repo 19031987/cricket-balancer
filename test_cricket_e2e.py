@@ -22,25 +22,33 @@ def test_02_member_login_and_rate_peer():
     manoj_id = manoj.id
     db.close()
 
-    # Rate Manoj
+    # Rate Manoj with specific scores
     rate_res = client.post("/api/rate", json={
         "rated_player_id": manoj_id,
-        "batting": 9.5,
-        "bowling": 5.0,
-        "fielding": 8.5
+        "batting": 8.5,
+        "bowling": 7.0,
+        "fielding": 9.0
     })
     assert rate_res.status_code == 200
     assert "Rating saved" in rate_res.json()["message"]
 
-    # Rate with slider defaulting to 0.0
-    rate_zero = client.post("/api/rate", json={
-        "rated_player_id": manoj_id,
-        "batting": 0.0,
-        "bowling": 0.0,
-        "fielding": 0.0
-    })
-    assert rate_zero.status_code == 200
-    assert "Rating saved" in rate_zero.json()["message"]
+    # Verify that the user can see the rating they provided via /api/state
+    state_res = client.get("/api/state")
+    assert state_res.status_code == 200
+    manoj_data = next(p for p in state_res.json()["players"] if p["id"] == manoj_id)
+    assert manoj_data["my_rating"] is not None
+    assert manoj_data["my_rating"]["batting"] == 8.5
+    assert manoj_data["my_rating"]["bowling"] == 7.0
+    assert manoj_data["my_rating"]["fielding"] == 9.0
+
+    # Verify dedicated rating retrieval endpoint GET /api/rate/{player_id}
+    get_rate_res = client.get(f"/api/rate/{manoj_id}")
+    assert get_rate_res.status_code == 200
+    r_data = get_rate_res.json()
+    assert r_data["has_rating"] is True
+    assert r_data["batting"] == 8.5
+    assert r_data["bowling"] == 7.0
+    assert r_data["fielding"] == 9.0
 
 def test_03_shuffler_diff_target_zero():
     res = client.post("/api/shuffle", json={})

@@ -293,12 +293,25 @@ def get_app_state(request: Request):
     db = SessionLocal()
     current_user = get_current_user(request, db)
     players = db.query(User).filter(User.role == "player", User.is_active == True).all()
+    
+    # Retrieve ratings submitted by the currently logged-in user
+    my_ratings = {}
+    if current_user:
+        user_ratings = db.query(Rating).filter(Rating.rater_id == current_user.id).all()
+        for r in user_ratings:
+            my_ratings[r.rated_player_id] = {
+                "batting": r.batting,
+                "bowling": r.bowling,
+                "fielding": r.fielding
+            }
+
     players_data = [{
         "id": p.id,
         "username": p.username,
         "full_name": p.full_name,
         "is_available": getattr(p, "is_available", True),
-        "rating_count": db.query(Rating).filter(Rating.rated_player_id == p.id).count()
+        "rating_count": db.query(Rating).filter(Rating.rated_player_id == p.id).count(),
+        "my_rating": my_ratings.get(p.id, None)
     } for p in players]
     user_data = {
         "id": current_user.id,
@@ -469,6 +482,32 @@ def rate_player(req: RateReq, request: Request):
     db.commit()
     db.close()
     return {"message": "Rating saved successfully!"}
+
+@app.get("/api/rate/{player_id}")
+def get_member_rating(player_id: int, request: Request):
+    db = SessionLocal()
+    user = get_current_user(request, db)
+    if not user:
+        db.close()
+        raise HTTPException(status_code=401, detail="Please login first.")
+    
+    existing = db.query(Rating).filter(
+        Rating.rater_id == user.id,
+        Rating.rated_player_id == player_id
+    ).first()
+    
+    if not existing:
+        db.close()
+        return {"has_rating": False, "batting": 0.0, "bowling": 0.0, "fielding": 0.0}
+    
+    data = {
+        "has_rating": True,
+        "batting": existing.batting,
+        "bowling": existing.bowling,
+        "fielding": existing.fielding
+    }
+    db.close()
+    return data
 
 @app.post("/api/shuffle")
 def shuffle_teams(req: ShuffleReq):
