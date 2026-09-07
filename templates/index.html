@@ -5,33 +5,49 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CricEquiBalance - Cricket Team Generator</title>
     <style>
-        :root { --bg: #0b1329; --card: #1c2541; --primary: #3a86ff; --success: #06d6a0; --danger: #ef476f; --accent: #ffd166; --text: #f8f9fa; }
+        :root { 
+            --bg: #000000; 
+            --card: #0f0f0f; 
+            --card-border: #262626;
+            --primary: #ffffff; 
+            --secondary: #1a1a1a;
+            --success: #ffffff; 
+            --danger: #737373; 
+            --accent: #ffffff; 
+            --text: #ffffff; 
+            --text-muted: #888888; 
+        }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background: var(--bg); color: var(--text); padding-bottom: 50px; }
-        header { background: var(--card); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #3a86ff33; }
+        header { background: #0a0a0a; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #262626; }
         .container { max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
-        .card { background: var(--card); padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
-        h2 { color: var(--accent); margin-bottom: 1rem; }
-        button { cursor: pointer; padding: 0.5rem 1rem; border-radius: 6px; border: none; font-weight: bold; transition: 0.2s; }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-success { background: var(--success); color: black; }
-        .btn-danger { background: var(--danger); color: white; }
-        .btn-accent { background: var(--accent); color: black; }
+        .card { background: var(--card); padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; border: 1px solid var(--card-border); box-shadow: 0 4px 20px rgba(255,255,255,0.02); }
+        h2 { color: #ffffff; margin-bottom: 1rem; }
+        button { cursor: pointer; padding: 0.5rem 1rem; border-radius: 6px; border: 1px solid #404040; font-weight: bold; transition: 0.2s; }
+        .btn-primary { background: #ffffff; color: #000000; border: 1px solid #ffffff; }
+        .btn-primary:hover { background: #dcdcdc; }
+        .btn-success { background: #1a1a1a; color: #ffffff; border: 1px solid #ffffff; }
+        .btn-success:hover { background: #2a2a2a; }
+        .btn-danger { background: #000000; color: #888888; border: 1px solid #333333; }
+        .btn-danger:hover { background: #1a1a1a; color: #ffffff; border-color: #ffffff; }
+        .btn-accent { background: #ffffff; color: #000000; border: 1px solid #ffffff; }
+        .btn-accent:hover { background: #dcdcdc; }
         .teams-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 1.5rem; align-items: start; margin-top: 1.5rem; }
-        .team-box { background: #0b1329; padding: 1.2rem; border-radius: 8px; border: 2px solid var(--primary); }
-        .team-box.b { border-color: #f72585; }
+        .team-box { background: #050505; padding: 1.2rem; border-radius: 8px; border: 2px solid #ffffff; }
+        .team-box.b { border-color: #737373; }
         .player-roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
-        .p-card { background: #0b1329; padding: 1.2rem; border-radius: 8px; border: 1px solid #3a86ff33; position: relative; display: flex; flex-direction: column; justify-content: space-between; }
-        .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.8rem; background: #3a86ff22; color: var(--primary); }
-        .captain-tag { background: #ffd16633; color: var(--accent); padding: 0.2rem 0.6rem; border-radius: 4px; font-weight: bold; font-size: 0.85rem; margin-left: 0.5rem; }
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: var(--card); padding: 2rem; border-radius: 12px; width: 360px; box-shadow: 0 8px 25px rgba(0,0,0,0.6); }
-        input, select { width: 100%; padding: 0.6rem; margin: 0.4rem 0 0.8rem; border-radius: 6px; border: 1px solid #444; background: #0b1329; color: white; }
-        .diff-alert { padding: 0.8rem; border-radius: 8px; font-weight: bold; text-align: center; margin-top: 1rem; }
+        .p-card { background: #080808; padding: 1.2rem; border-radius: 8px; border: 1px solid #222222; position: relative; display: flex; flex-direction: column; justify-content: space-between; }
+        .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.8rem; background: #1a1a1a; color: #ffffff; border: 1px solid #333333; }
+        .captain-tag { background: #ffffff; color: #000000; padding: 0.2rem 0.6rem; border-radius: 4px; font-weight: bold; font-size: 0.85rem; margin-left: 0.5rem; }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: #0d0d0d; border: 1px solid #333333; padding: 2rem; border-radius: 12px; width: 360px; box-shadow: 0 8px 35px rgba(255,255,255,0.05); }
+        input, select { width: 100%; padding: 0.6rem; margin: 0.4rem 0 0.8rem; border-radius: 6px; border: 1px solid #333333; background: #000000; color: #ffffff; }
+        input[type="range"] { accent-color: #ffffff; cursor: pointer; }
+        .diff-alert { padding: 0.8rem; border-radius: 8px; font-weight: bold; text-align: center; margin-top: 1rem; border: 1px solid #ffffff; }
         ul.player-list { list-style: none; padding: 0; margin: 1rem 0; line-height: 2.2; }
-        ul.player-list li { padding: 0.3rem 0.6rem; background: #131d38; margin-bottom: 0.4rem; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+        ul.player-list li { padding: 0.3rem 0.6rem; background: #111111; margin-bottom: 0.4rem; border-radius: 6px; border: 1px solid #222222; display: flex; justify-content: space-between; align-items: center; }
 
-        /* 3D Coin Rotation Animation Styles */
+        /* Black & White 3D Coin Animation */
         .coin-stage {
             perspective: 1000px;
             display: flex;
@@ -47,7 +63,7 @@
             transform-style: preserve-3d;
             border-radius: 50%;
             cursor: pointer;
-            box-shadow: 0 0 25px rgba(255, 209, 102, 0.4);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
         }
         .coin-face {
             position: absolute;
@@ -60,16 +76,17 @@
             align-items: center;
             justify-content: center;
             font-weight: 900;
-            border: 4px solid #b45309;
         }
         .coin-heads {
-            background: radial-gradient(circle, #fde047, #ca8a04);
-            color: #451a03;
+            background: radial-gradient(circle, #ffffff, #999999);
+            color: #000000;
+            border: 4px solid #ffffff;
             transform: rotateY(0deg);
         }
         .coin-tails {
-            background: radial-gradient(circle, #fbbf24, #b45309);
-            color: #451a03;
+            background: radial-gradient(circle, #2a2a2a, #0a0a0a);
+            color: #ffffff;
+            border: 4px solid #666666;
             transform: rotateY(180deg);
         }
         @keyframes spinToHeads {
@@ -123,7 +140,7 @@
                 <!-- Team B -->
                 <div class="team-box b">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <h3 style="color: #f72585;">Team B</h3>
+                        <h3 style="color: #cccccc;">Team B</h3>
                         <span id="capBDisplay" class="captain-tag">👑 Captain: -</span>
                     </div>
                     <ul id="teamBPlayers" class="player-list"></ul>
@@ -133,8 +150,8 @@
             </div>
 
             <!-- Captains 3D Rotating Toss Section -->
-            <div id="tossArea" style="display: none; margin-top: 1.8rem; background: #0b1329; padding: 1.8rem; border-radius: 12px; border: 2px solid var(--accent); text-align: center;">
-                <h3 style="color: var(--accent); font-size: 1.3rem;">🪙 Captains' Live 3D Coin Toss</h3>
+            <div id="tossArea" style="display: none; margin-top: 1.8rem; background: #080808; padding: 1.8rem; border-radius: 12px; border: 1px solid #333333; text-align: center;">
+                <h3 style="color: #ffffff; font-size: 1.3rem;">🪙 Captains' Live 3D Coin Toss</h3>
                 <p id="tossPrompt" style="margin: 0.8rem 0; font-size: 1.1rem; color: #f8fafc;">Team A Captain calls the coin:</p>
 
                 <!-- Rotating Coin Stage -->
@@ -161,7 +178,7 @@
                 <div id="tossBanner" style="margin-top: 1.5rem; font-size: 1.15rem;"></div>
 
                 <!-- Post-Toss Decision Section (Captain chooses BAT or BOWL) -->
-                <div id="tossDecisionSection" style="display: none; margin-top: 1.2rem; text-align: center; background: #0f172a; border: 2px dashed var(--accent); padding: 1.2rem; border-radius: 10px;">
+                <div id="tossDecisionSection" style="display: none; margin-top: 1.2rem; text-align: center; background: #0a0a0a; border: 1px dashed #ffffff; padding: 1.2rem; border-radius: 10px;">
                     <div id="tossDecisionPrompt" style="font-weight: bold; margin-bottom: 0.8rem; font-size: 1.15rem; color: #f1f5f9;"></div>
                     <div style="display: flex; justify-content: center; gap: 1.2rem;">
                         <button class="btn-primary" style="padding: 0.7rem 1.8rem; font-size: 1.1rem;" onclick="makeTossDecision('BAT')">🏏 Choose BAT First</button>
@@ -177,9 +194,9 @@
                 <div>
                     <h2 style="display: inline-flex; align-items: center; gap: 0.5rem;">
                         👥 Member Roster & Peer Ratings
-                        <span id="availCountBadge" class="badge" style="background:#06d6a0; color:#0f172a; font-size: 0.85rem;">12 Available</span>
+                        <span id="availCountBadge" class="badge" style="background: #ffffff; color: #000000; font-size: 0.85rem; border: 1px solid #ffffff;">12 Available</span>
                     </h2>
-                    <p style="color: #94a3b8;">Mark player availability for match shuffling. Individual performance averages are kept confidential.</p>
+                    <p style="color: #888888;">Mark player availability for match shuffling. Individual performance averages are kept confidential.</p>
                 </div>
                 <div id="adminActionArea"></div>
             </div>
@@ -206,7 +223,7 @@
     <div id="rateModal" class="modal">
         <div class="modal-content">
             <h3 id="rateTitle">Rate Player</h3>
-            <p id="rateModalSubtitle" style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 1.2rem;">Ratings are private and used solely for balanced team shuffling.</p>
+            <p id="rateModalSubtitle" style="color: #888888; font-size: 0.85rem; margin-bottom: 1.2rem;">Ratings are private and used solely for balanced team shuffling.</p>
             <form onsubmit="handleRate(event)">
                 <input type="hidden" id="targetPlayerId">
 
@@ -214,27 +231,27 @@
                 <div style="margin-bottom: 1.2rem;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
                         <label style="font-weight: bold; color: #f8fafc; margin: 0;">🏏 Batting</label>
-                        <span id="batVal" style="background: var(--primary); color: white; padding: 0.15rem 0.6rem; border-radius: 12px; font-weight: bold; font-size: 0.9rem;">0.0 / 10</span>
+                        <span id="batVal" style="background: #ffffff; color: #000000; padding: 0.15rem 0.6rem; border-radius: 12px; font-weight: bold; font-size: 0.9rem; border: 1px solid #ffffff;">0.0 / 10</span>
                     </div>
-                    <input type="range" id="batScore" min="0" max="10" step="0.1" value="0" oninput="document.getElementById('batVal').innerText = parseFloat(this.value).toFixed(1) + ' / 10'" style="width: 100%; accent-color: var(--primary); cursor: pointer;">
+                    <input type="range" id="batScore" min="0" max="10" step="0.1" value="0" oninput="document.getElementById('batVal').innerText = parseFloat(this.value).toFixed(1) + ' / 10'" style="width: 100%; accent-color: #ffffff; cursor: pointer;">
                 </div>
 
                 <!-- Bowling Slider -->
                 <div style="margin-bottom: 1.2rem;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
                         <label style="font-weight: bold; color: #f8fafc; margin: 0;">⚾ Bowling</label>
-                        <span id="bowlVal" style="background: var(--accent); color: #0b1329; padding: 0.15rem 0.6rem; border-radius: 12px; font-weight: bold; font-size: 0.9rem;">0.0 / 10</span>
+                        <span id="bowlVal" style="background: #ffffff; color: #000000; padding: 0.15rem 0.6rem; border-radius: 12px; font-weight: bold; font-size: 0.9rem; border: 1px solid #ffffff;">0.0 / 10</span>
                     </div>
-                    <input type="range" id="bowlScore" min="0" max="10" step="0.1" value="0" oninput="document.getElementById('bowlVal').innerText = parseFloat(this.value).toFixed(1) + ' / 10'" style="width: 100%; accent-color: var(--accent); cursor: pointer;">
+                    <input type="range" id="bowlScore" min="0" max="10" step="0.1" value="0" oninput="document.getElementById('bowlVal').innerText = parseFloat(this.value).toFixed(1) + ' / 10'" style="width: 100%; accent-color: #ffffff; cursor: pointer;">
                 </div>
 
                 <!-- Fielding Slider -->
                 <div style="margin-bottom: 1.4rem;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
                         <label style="font-weight: bold; color: #f8fafc; margin: 0;">🧤 Fielding</label>
-                        <span id="fldVal" style="background: var(--success); color: #0b1329; padding: 0.15rem 0.6rem; border-radius: 12px; font-weight: bold; font-size: 0.9rem;">0.0 / 10</span>
+                        <span id="fldVal" style="background: #ffffff; color: #000000; padding: 0.15rem 0.6rem; border-radius: 12px; font-weight: bold; font-size: 0.9rem; border: 1px solid #ffffff;">0.0 / 10</span>
                     </div>
-                    <input type="range" id="fldScore" min="0" max="10" step="0.1" value="0" oninput="document.getElementById('fldVal').innerText = parseFloat(this.value).toFixed(1) + ' / 10'" style="width: 100%; accent-color: var(--success); cursor: pointer;">
+                    <input type="range" id="fldScore" min="0" max="10" step="0.1" value="0" oninput="document.getElementById('fldVal').innerText = parseFloat(this.value).toFixed(1) + ' / 10'" style="width: 100%; accent-color: #ffffff; cursor: pointer;">
                 </div>
 
                 <button type="submit" class="btn-success" style="width: 100%;">Submit Rating</button>
@@ -317,8 +334,9 @@
             const availBadge = document.getElementById('availCountBadge');
             if (availBadge) {
                 availBadge.innerText = `${availCount} / ${players.length} Available`;
-                availBadge.style.background = availCount >= 12 ? '#06d6a0' : '#ef476f';
-                availBadge.style.color = '#0f172a';
+                availBadge.style.background = availCount >= 12 ? '#ffffff' : '#1a1a1a';
+                availBadge.style.color = availCount >= 12 ? '#000000' : '#888888';
+                availBadge.style.border = '1px solid #ffffff';
             }
 
             players.forEach(p => {
@@ -327,28 +345,28 @@
                 const isAvail = p.is_available !== false;
                 const hasMyRating = p.my_rating !== null && p.my_rating !== undefined;
                 roster.innerHTML += `
-                    <div class="p-card" style="border-top: 3px solid ${isAvail ? 'var(--success)' : '#ef476f'};">
+                    <div class="p-card" style="border-top: 3px solid ${isAvail ? '#ffffff' : '#333333'};">
                         <div>
                             <div style="display:flex; justify-content:space-between; align-items:center;">
                                 <h4>🏏 ${p.full_name}</h4>
-                                <span class="badge" style="background: ${isAvail ? '#06d6a033' : '#ef476f33'}; color: ${isAvail ? 'var(--success)' : '#ef476f'};">
-                                    ${isAvail ? '🟢 Available' : '🔴 Unavailable'}
+                                <span class="badge" style="background: ${isAvail ? '#1a1a1a' : '#000000'}; color: ${isAvail ? '#ffffff' : '#737373'}; border: 1px solid ${isAvail ? '#ffffff' : '#333333'};">
+                                    ${isAvail ? '⚪ Available' : '✖ Unavailable'}
                                 </span>
                             </div>
-                            <div style="margin: 0.8rem 0; font-size: 0.9rem; color: #94a3b8;">
+                            <div style="margin: 0.8rem 0; font-size: 0.9rem; color: #888888;">
                                 <div>Username: <code>${p.username}</code></div>
                                 <div>Peer reviews: <strong>${p.rating_count} member(s)</strong></div>
                                 ${hasMyRating ? `
-                                    <div style="margin-top: 0.5rem; font-size: 0.82rem; color: #ffd166; background: #ffd16618; padding: 0.3rem 0.6rem; border-radius: 6px; border: 1px solid #ffd16644;">
+                                    <div style="margin-top: 0.5rem; font-size: 0.82rem; color: #ffffff; background: #1a1a1a; padding: 0.3rem 0.6rem; border-radius: 6px; border: 1px solid #333333;">
                                         ⭐ <strong>Your Rating:</strong> Bat ${p.my_rating.batting} | Bowl ${p.my_rating.bowling} | Fld ${p.my_rating.fielding}
                                     </div>
                                 ` : ''}
                             </div>
                             <!-- Availability Action -->
-                            <div style="margin: 0.6rem 0; display: flex; align-items: center; justify-content: space-between; background: #0f172a; padding: 0.4rem 0.6rem; border-radius: 6px;">
-                                <span style="font-size: 0.85rem; color: #94a3b8;">Match Status:</span>
+                            <div style="margin: 0.6rem 0; display: flex; align-items: center; justify-content: space-between; background: #050505; border: 1px solid #222222; padding: 0.4rem 0.6rem; border-radius: 6px;">
+                                <span style="font-size: 0.85rem; color: #888888;">Match Status:</span>
                                 <button onclick="togglePlayerAvailability(${p.id}, ${!isAvail})" 
-                                        style="cursor: pointer; padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.8rem; font-weight: bold; background: ${isAvail ? '#ef476f22' : '#06d6a022'}; color: ${isAvail ? '#ef476f' : '#06d6a0'}; border: 1px solid ${isAvail ? '#ef476f' : '#06d6a0'};">
+                                        style="cursor: pointer; padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.8rem; font-weight: bold; background: ${isAvail ? '#000000' : '#1a1a1a'}; color: ${isAvail ? '#888888' : '#ffffff'}; border: 1px solid ${isAvail ? '#333333' : '#ffffff'};">
                                     ${isAvail ? 'Mark Unavailable ✖' : 'Mark Available ✔'}
                                 </button>
                             </div>
@@ -534,7 +552,7 @@
             // Display overall balance difference
             const diffDiv = document.getElementById('diffResult');
             diffDiv.innerHTML = `
-                <div class="diff-alert" style="background: ${data.diff === 0 ? '#06d6a033' : '#ef476f33'}; color: ${data.diff === 0 ? '#06d6a0' : '#ef476f'};">
+                <div class="diff-alert" style="background: ${data.diff === 0 ? '#111111' : '#1a1a1a'}; color: #ffffff; border: 1px solid ${data.diff === 0 ? '#ffffff' : '#737373'};">
                     Team Balance Rating Difference: <strong>${data.diff.toFixed(1)}</strong> 
                     (${data.diff === 0 ? '✅ Perfectly Balanced: 0.0 Difference' : '⚠️ Minimal Possible Diff: ' + data.diff.toFixed(1)})
                 </div>
@@ -589,12 +607,14 @@
                 if (el) {
                     if (p.id === capAId) {
                         el.innerText = '👑 Captain';
-                        el.style.background = '#ffd16633';
-                        el.style.color = '#ffd166';
+                        el.style.background = '#ffffff';
+                        el.style.color = '#000000';
+                        el.style.border = '1px solid #ffffff';
                     } else {
                         el.innerText = 'Player';
-                        el.style.background = '#3a86ff22';
-                        el.style.color = '#3a86ff';
+                        el.style.background = '#1a1a1a';
+                        el.style.color = '#ffffff';
+                        el.style.border = '1px solid #333333';
                     }
                 }
             });
@@ -604,12 +624,14 @@
                 if (el) {
                     if (p.id === capBId) {
                         el.innerText = '👑 Captain';
-                        el.style.background = '#ffd16633';
-                        el.style.color = '#ffd166';
+                        el.style.background = '#ffffff';
+                        el.style.color = '#000000';
+                        el.style.border = '1px solid #ffffff';
                     } else {
                         el.innerText = 'Player';
-                        el.style.background = '#3a86ff22';
-                        el.style.color = '#3a86ff';
+                        el.style.background = '#1a1a1a';
+                        el.style.color = '#ffffff';
+                        el.style.border = '1px solid #333333';
                     }
                 }
             });
@@ -640,7 +662,7 @@
             // Reset previous animations
             coinEl.classList.remove('flip-heads-anim', 'flip-tails-anim');
             void coinEl.offsetWidth; // trigger reflow
-            banner.innerHTML = `<div style="color: var(--accent); font-weight: bold;">🪙 Flipping coin in the air... Calling ${callChoice}!</div>`;
+            banner.innerHTML = `<div style="color: #ffffff; font-weight: bold;">🪙 Flipping coin in the air... Calling ${callChoice}!</div>`;
 
             // Confirm captains
             await fetch(`/api/match/${currentMatch.match_id}/captains`, {
@@ -676,7 +698,7 @@
             // Reveal result when rotation finishes (2.2 seconds)
             setTimeout(() => {
                 banner.innerHTML = `
-                    <div style="background: #06d6a022; border: 2px solid var(--success); padding: 1.2rem; border-radius: 10px; color: var(--success); font-weight: bold; font-size: 1.25rem;">
+                    <div style="background: #111111; border: 2px solid #ffffff; padding: 1.2rem; border-radius: 10px; color: #ffffff; font-weight: bold; font-size: 1.25rem;">
                         🪙 Coin Result: <strong>${result.coin}</strong>!<br>
                         🏆 ${result.statement}
                     </div>
@@ -703,7 +725,7 @@
             document.getElementById('tossDecisionSection').style.display = 'none';
             const banner = document.getElementById('tossBanner');
             banner.innerHTML += `
-                <div style="margin-top: 1rem; background: #ffd16622; border: 2px solid var(--accent); padding: 1rem; border-radius: 10px; color: var(--accent); font-weight: bold; font-size: 1.2rem;">
+                <div style="margin-top: 1rem; background: #1a1a1a; border: 1px solid #ffffff; padding: 1rem; border-radius: 10px; color: #ffffff; font-weight: bold; font-size: 1.2rem;">
                     🏏 Match Update: Captain <strong>${data.winner_name}</strong> elected to <strong>${data.decision}</strong> first!
                 </div>
             `;
