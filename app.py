@@ -301,6 +301,59 @@ def change_password(req: PasswordChangeReq, request: Request):
     db.close()
     return {"message": "Password updated successfully!"}
 
+class AddMemberReq(BaseModel):
+    username: str
+    full_name: str
+    password: str = "cricket123"
+
+class AdminChangePasswordReq(BaseModel):
+    user_id: int
+    new_password: str
+
+@app.post("/api/admin/member")
+def add_member(req: AddMemberReq, request: Request):
+    db = SessionLocal()
+    admin = get_current_user(request, db)
+    if not admin or admin.role != "admin":
+        db.close()
+        raise HTTPException(status_code=403, detail="Only Admin can add members.")
+    
+    clean_uname = req.username.strip().lower()
+    if db.query(User).filter(User.username == clean_uname).first():
+        db.close()
+        raise HTTPException(status_code=400, detail="Username already exists.")
+    
+    new_user = User(
+        username=clean_uname,
+        password_hash=hash_pw(req.password.strip() if req.password else "cricket123"),
+        full_name=req.full_name.strip(),
+        role="player"
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    db.close()
+    return {"message": f"Member '{new_user.full_name}' added successfully!"}
+
+@app.post("/api/admin/member/change-password")
+def admin_change_member_password(req: AdminChangePasswordReq, request: Request):
+    db = SessionLocal()
+    admin = get_current_user(request, db)
+    if not admin or admin.role != "admin":
+        db.close()
+        raise HTTPException(status_code=403, detail="Only Admin can change member passwords.")
+    
+    target = db.query(User).filter(User.id == req.user_id).first()
+    if not target:
+        db.close()
+        raise HTTPException(status_code=404, detail="Member not found.")
+    
+    name = target.full_name
+    target.password_hash = hash_pw(req.new_password)
+    db.commit()
+    db.close()
+    return {"message": f"Password for '{name}' updated successfully."}
+
 @app.delete("/api/admin/member/{member_id}")
 def delete_member(member_id: int, request: Request):
     db = SessionLocal()
@@ -317,10 +370,11 @@ def delete_member(member_id: int, request: Request):
         db.close()
         raise HTTPException(status_code=400, detail="Cannot delete Admin account")
 
+    name = target.full_name
     db.delete(target)
     db.commit()
     db.close()
-    return {"message": f"Member {target.full_name} deleted successfully."}
+    return {"message": f"Member {name} deleted successfully."}
 
 @app.post("/api/rate")
 def rate_player(req: RateReq, request: Request):

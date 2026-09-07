@@ -1,4 +1,4 @@
-﻿import pytest
+import pytest
 from fastapi.testclient import TestClient
 from app import app, Base, engine, SessionLocal, User, Rating
 
@@ -66,7 +66,54 @@ def test_04_captain_nomination_and_toss():
     assert toss_data["coin"] in ["HEADS", "TAILS"]
     assert "won the toss and elected to BAT first" in toss_data["statement"]
 
-def test_05_admin_delete_member():
+def test_05_admin_add_user_and_change_member_password():
+    # Login as Admin
+    client.post("/api/login", json={"username": "Admin", "password": "Admin@123"})
+    
+    # Clean up test user if exists from prior run
+    db = SessionLocal()
+    existing = db.query(User).filter(User.username == "karthik").first()
+    if existing:
+        db.delete(existing)
+        db.commit()
+    db.close()
+
+    # 1. Admin adds new member
+    add_res = client.post("/api/admin/member", json={
+        "username": "karthik",
+        "full_name": "Karthik",
+        "password": "initial_password_123"
+    })
+    assert add_res.status_code == 200
+    assert "added successfully" in add_res.json()["message"]
+
+    # Verify new user can login
+    new_login = client.post("/api/login", json={"username": "karthik", "password": "initial_password_123"})
+    assert new_login.status_code == 200
+
+    # 2. Member changes own password
+    chg_res = client.post("/api/change-password", json={"new_password": "member_new_pass_456"})
+    assert chg_res.status_code == 200
+
+    # 3. Admin resets member password
+    client.post("/api/login", json={"username": "Admin", "password": "Admin@123"})
+    db = SessionLocal()
+    karthik = db.query(User).filter(User.username == "karthik").first()
+    karthik_id = karthik.id
+    db.close()
+
+    admin_chg = client.post("/api/admin/member/change-password", json={
+        "user_id": karthik_id,
+        "new_password": "admin_set_pass_789"
+    })
+    assert admin_chg.status_code == 200
+    assert "updated successfully" in admin_chg.json()["message"]
+
+    # Verify login with the admin-set password
+    verify_login = client.post("/api/login", json={"username": "karthik", "password": "admin_set_pass_789"})
+    assert verify_login.status_code == 200
+
+def test_06_admin_delete_member():
     # Login as Admin
     client.post("/api/login", json={"username": "Admin", "password": "Admin@123"})
     db = SessionLocal()
