@@ -261,9 +261,9 @@ class PasswordChangeReq(BaseModel):
 
 class RateReq(BaseModel):
     rated_player_id: int
-    batting: float = Field(..., ge=1.0, le=10.0)
-    bowling: float = Field(..., ge=1.0, le=10.0)
-    fielding: float = Field(..., ge=1.0, le=10.0)
+    batting: float = Field(..., ge=0.0, le=10.0)
+    bowling: float = Field(..., ge=0.0, le=10.0)
+    fielding: float = Field(..., ge=0.0, le=10.0)
 
 class ShuffleReq(BaseModel):
     selected_ids: Optional[List[int]] = None
@@ -473,23 +473,42 @@ def shuffle_teams(req: ShuffleReq):
     query = db.query(User).filter(User.role == "player", User.is_active == True, User.is_available == True)
     if req.selected_ids and len(req.selected_ids) == 12:
         players_db = query.filter(User.id.in_(req.selected_ids)).all()
+        if len(players_db) != 12:
+            db.close()
+            raise HTTPException(status_code=400, detail="Exactly 12 valid players must be selected.")
+        players_data = [get_player_stats(p, db) for p in players_db]
+        result = balance_12_players(players_data, target_diff=0.10)
     else:
         all_available = query.all()
-        if len(all_available) >= 12:
-            players_db = random.sample(all_available, 12)
+        if len(all_available) < 12:
+            available_count = len(all_available)
+            db.close()
+            raise HTTPException(status_code=400, detail=f"12 available players are required to shuffle. Currently available: {available_count}. Please mark at least 12 players as Available.")
+        
+        # When 12 or more players are available, try randomized candidate combinations
+        if len(all_available) == 12:
+            combos = [all_available]
         else:
-            players_db = all_available
+            combos = list(itertools.combinations(all_available, 12))
+            random.shuffle(combos)
 
-    if len(players_db) != 12:
-        available_count = query.count()
-        db.close()
-        raise HTTPException(status_code=400, detail=f"12 available players are required to shuffle. Currently available: {available_count}. Please mark at least 12 players as Available.")
+        best_result = None
+        min_overall_diff = float("inf")
+        chosen_result = None
 
-    # Randomize order of players
-    random.shuffle(players_db)
-
-    players_data = [get_player_stats(p, db) for p in players_db]
-    result = balance_12_players(players_data, target_diff=0.10)
+        for candidate in combos:
+            cand_list = list(candidate)
+            random.shuffle(cand_list)
+            p_data = [get_player_stats(p, db) for p in cand_list]
+            res = balance_12_players(p_data, target_diff=0.10)
+            if res["diff"] < min_overall_diff:
+                min_overall_diff = res["diff"]
+                best_result = res
+            if res["target_met"]:
+                chosen_result = res
+                break
+        
+        result = chosen_result if chosen_result else best_result
 
     # Randomly pick initial captain for Team A and Team B
     cap_a = random.choice(result['team_a'])

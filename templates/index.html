@@ -206,15 +206,37 @@
     <div id="rateModal" class="modal">
         <div class="modal-content">
             <h3 id="rateTitle">Rate Player</h3>
-            <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 0.8rem;">Ratings are private and used solely for balanced team shuffling.</p>
+            <p style="color: #94a3b8; font-size: 0.85rem; margin-bottom: 1.2rem;">Ratings are private and used solely for balanced team shuffling.</p>
             <form onsubmit="handleRate(event)">
                 <input type="hidden" id="targetPlayerId">
-                <label>Batting (1.0 - 10.0)</label>
-                <input type="number" id="batScore" step="0.1" min="1" max="10" required>
-                <label>Bowling (1.0 - 10.0)</label>
-                <input type="number" id="bowlScore" step="0.1" min="1" max="10" required>
-                <label>Fielding (1.0 - 10.0)</label>
-                <input type="number" id="fldScore" step="0.1" min="1" max="10" required>
+
+                <!-- Batting Slider -->
+                <div style="margin-bottom: 1.2rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
+                        <label style="font-weight: bold; color: #f8fafc; margin: 0;">🏏 Batting</label>
+                        <span id="batVal" style="background: var(--primary); color: white; padding: 0.15rem 0.6rem; border-radius: 12px; font-weight: bold; font-size: 0.9rem;">0.0 / 10</span>
+                    </div>
+                    <input type="range" id="batScore" min="0" max="10" step="0.1" value="0" oninput="document.getElementById('batVal').innerText = parseFloat(this.value).toFixed(1) + ' / 10'" style="width: 100%; accent-color: var(--primary); cursor: pointer;">
+                </div>
+
+                <!-- Bowling Slider -->
+                <div style="margin-bottom: 1.2rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
+                        <label style="font-weight: bold; color: #f8fafc; margin: 0;">⚾ Bowling</label>
+                        <span id="bowlVal" style="background: var(--accent); color: #0b1329; padding: 0.15rem 0.6rem; border-radius: 12px; font-weight: bold; font-size: 0.9rem;">0.0 / 10</span>
+                    </div>
+                    <input type="range" id="bowlScore" min="0" max="10" step="0.1" value="0" oninput="document.getElementById('bowlVal').innerText = parseFloat(this.value).toFixed(1) + ' / 10'" style="width: 100%; accent-color: var(--accent); cursor: pointer;">
+                </div>
+
+                <!-- Fielding Slider -->
+                <div style="margin-bottom: 1.4rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
+                        <label style="font-weight: bold; color: #f8fafc; margin: 0;">🧤 Fielding</label>
+                        <span id="fldVal" style="background: var(--success); color: #0b1329; padding: 0.15rem 0.6rem; border-radius: 12px; font-weight: bold; font-size: 0.9rem;">0.0 / 10</span>
+                    </div>
+                    <input type="range" id="fldScore" min="0" max="10" step="0.1" value="0" oninput="document.getElementById('fldVal').innerText = parseFloat(this.value).toFixed(1) + ' / 10'" style="width: 100%; accent-color: var(--success); cursor: pointer;">
+                </div>
+
                 <button type="submit" class="btn-success" style="width: 100%;">Submit Rating</button>
                 <button type="button" class="btn-danger" style="width: 100%; margin-top: 0.5rem;" onclick="toggleModal('rateModal', false)">Cancel</button>
             </form>
@@ -436,6 +458,13 @@
         function openRateModal(id, name) {
             document.getElementById('targetPlayerId').value = id;
             document.getElementById('rateTitle').innerText = 'Rate ' + name;
+            // Default all rating sliders to zero
+            document.getElementById('batScore').value = 0;
+            document.getElementById('batVal').innerText = '0.0 / 10';
+            document.getElementById('bowlScore').value = 0;
+            document.getElementById('bowlVal').innerText = '0.0 / 10';
+            document.getElementById('fldScore').value = 0;
+            document.getElementById('fldVal').innerText = '0.0 / 10';
             toggleModal('rateModal', true);
         }
 

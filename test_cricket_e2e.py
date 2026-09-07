@@ -32,6 +32,16 @@ def test_02_member_login_and_rate_peer():
     assert rate_res.status_code == 200
     assert "Rating saved" in rate_res.json()["message"]
 
+    # Rate with slider defaulting to 0.0
+    rate_zero = client.post("/api/rate", json={
+        "rated_player_id": manoj_id,
+        "batting": 0.0,
+        "bowling": 0.0,
+        "fielding": 0.0
+    })
+    assert rate_zero.status_code == 200
+    assert "Rating saved" in rate_zero.json()["message"]
+
 def test_03_shuffler_diff_less_than_or_equal_0_1():
     res = client.post("/api/shuffle", json={})
     assert res.status_code == 200
