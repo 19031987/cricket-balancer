@@ -1,0 +1,285 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CricEquiBalance - Cricket Team Generator</title>
+    <style>
+        :root { --bg: #0b1329; --card: #1c2541; --primary: #3a86ff; --success: #06d6a0; --danger: #ef476f; --accent: #ffd166; --text: #f8f9fa; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background: var(--bg); color: var(--text); padding-bottom: 50px; }
+        header { background: var(--card); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #3a86ff33; }
+        .container { max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
+        .card { background: var(--card); padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
+        h2 { color: var(--accent); margin-bottom: 1rem; }
+        button { cursor: pointer; padding: 0.6rem 1.2rem; border-radius: 6px; border: none; font-weight: bold; transition: 0.2s; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-success { background: var(--success); color: black; }
+        .btn-danger { background: var(--danger); color: white; }
+        .teams-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 1.5rem; align-items: center; margin-top: 1.5rem; }
+        .team-box { background: #0b1329; padding: 1.2rem; border-radius: 8px; border: 2px solid var(--primary); }
+        .team-box.b { border-color: #f72585; }
+        .player-roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
+        .p-card { background: #0b1329; padding: 1rem; border-radius: 8px; border: 1px solid #3a86ff33; position: relative; }
+        .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.8rem; background: #3a86ff22; color: var(--primary); }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: var(--card); padding: 2rem; border-radius: 12px; width: 340px; }
+        input, select { width: 100%; padding: 0.6rem; margin: 0.5rem 0 1rem; border-radius: 6px; border: 1px solid #444; background: #0b1329; color: white; }
+        .diff-alert { padding: 0.8rem; border-radius: 8px; font-weight: bold; text-align: center; margin-top: 1rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <div style="font-size: 1.4rem; font-weight: bold;">🏏 CricEquiBalance</div>
+        <div id="authNav"></div>
+    </header>
+
+    <div class="container">
+        <div class="card">
+            <h2>⚖️ 12-Member Team Shuffler (Diff &le; 0.10 Target)</h2>
+            <p style="color: #bbb; margin-bottom: 1rem;">Splits 12 playing members into perfectly balanced Team A vs Team B.</p>
+            <button class="btn-primary" onclick="shuffleTeams()" style="font-size: 1.1rem;">⚡ Shuffle 12 Players</button>
+            <div id="diffResult"></div>
+
+            <div id="matchArea" style="display:none;" class="teams-grid">
+                <div class="team-box">
+                    <h3 style="color: var(--primary);">Team A <span id="teamAAvg" class="badge"></span></h3>
+                    <ul id="teamAPlayers" style="margin: 1rem 0; padding-left: 1.2rem; line-height: 1.8;"></ul>
+                    <label>Select Team A Captain:</label>
+                    <select id="capA"></select>
+                </div>
+                <div style="font-size: 1.5rem; font-weight: bold; color: var(--accent);">VS</div>
+                <div class="team-box b">
+                    <h3 style="color: #f72585;">Team B <span id="teamBAvg" class="badge"></span></h3>
+                    <ul id="teamBPlayers" style="margin: 1rem 0; padding-left: 1.2rem; line-height: 1.8;"></ul>
+                    <label>Select Team B Captain:</label>
+                    <select id="capB"></select>
+                </div>
+            </div>
+
+            <div id="tossArea" style="display: none; margin-top: 1.5rem; background: #0b1329; padding: 1.5rem; border-radius: 8px;">
+                <h3>🪙 Captains' Live Toss</h3>
+                <p style="margin: 0.5rem 0;">Captain A calls the coin:</p>
+                <button class="btn-success" onclick="runToss('HEADS')">Call HEADS & Toss</button>
+                <button class="btn-success" onclick="runToss('TAILS')">Call TAILS & Toss</button>
+                <div id="tossBanner" style="margin-top: 1rem; font-size: 1.2rem;"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>👥 Member Roster & Peer Ratings (13 Members)</h2>
+            <div class="player-roster" id="roster"></div>
+        </div>
+    </div>
+
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <h3>Member / Admin Login</h3>
+            <form onsubmit="handleLogin(event)">
+                <label>Username</label>
+                <input type="text" id="loginUser" required placeholder="e.g. Admin or raghavendra">
+                <label>Password</label>
+                <input type="password" id="loginPass" required placeholder="Admin@123 or cricket123">
+                <button type="submit" class="btn-primary" style="width: 100%;">Login</button>
+                <button type="button" class="btn-danger" style="width: 100%; margin-top: 0.5rem;" onclick="toggleModal('loginModal', false)">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="rateModal" class="modal">
+        <div class="modal-content">
+            <h3 id="rateTitle">Rate Player</h3>
+            <form onsubmit="handleRate(event)">
+                <input type="hidden" id="targetPlayerId">
+                <label>Batting (1.0 - 10.0)</label>
+                <input type="number" id="batScore" step="0.1" min="1" max="10" required>
+                <label>Bowling (1.0 - 10.0)</label>
+                <input type="number" id="bowlScore" step="0.1" min="1" max="10" required>
+                <label>Fielding (1.0 - 10.0)</label>
+                <input type="number" id="fldScore" step="0.1" min="1" max="10" required>
+                <button type="submit" class="btn-success" style="width: 100%;">Submit Rating</button>
+                <button type="button" class="btn-danger" style="width: 100%; margin-top: 0.5rem;" onclick="toggleModal('rateModal', false)">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let players = [];
+        let currentMatch = null;
+
+        async function loadState() {
+            const res = await fetch('/api/state');
+            const data = await res.json();
+            currentUser = data.current_user;
+            players = data.players;
+            renderNav();
+            renderRoster();
+        }
+
+        function renderNav() {
+            const nav = document.getElementById('authNav');
+            if (currentUser) {
+                nav.innerHTML = `
+                    <span>👤 <strong>${currentUser.full_name}</strong> (${currentUser.role})</span>
+                    <button class="btn-danger" style="margin-left: 1rem;" onclick="logout()">Logout</button>
+                `;
+            } else {
+                nav.innerHTML = `<button class="btn-primary" onclick="toggleModal('loginModal', true)">Login to Rate</button>`;
+            }
+        }
+
+        function renderRoster() {
+            const roster = document.getElementById('roster');
+            roster.innerHTML = '';
+            players.forEach(p => {
+                const canRate = currentUser && currentUser.role === 'player' && currentUser.id !== p.id;
+                const canDelete = currentUser && currentUser.role === 'admin';
+                roster.innerHTML += `
+                    <div class="p-card">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <h4>${p.full_name}</h4>
+                            <span class="badge">Rating: ${p.overall_rating}/10</span>
+                        </div>
+                        <div style="margin: 0.5rem 0; font-size: 0.9rem; color: #ccc;">
+                            <div>🏏 Batting Avg: <strong>${p.batting_avg}</strong></div>
+                            <div>🎯 Bowling Avg: <strong>${p.bowling_avg}</strong></div>
+                            <div>🧤 Fielding Avg: <strong>${p.fielding_avg}</strong></div>
+                        </div>
+                        <div style="margin-top: 0.8rem; display: flex; gap: 0.5rem;">
+                            ${canRate ? `<button class="btn-success" onclick="openRateModal(${p.id}, '${p.full_name}')">⭐ Rate</button>` : ''}
+                            ${canDelete ? `<button class="btn-danger" onclick="deleteMember(${p.id}, '${p.full_name}')">🗑️ Delete</button>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function toggleModal(id, show) {
+            document.getElementById(id).style.display = show ? 'flex' : 'none';
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const res = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: document.getElementById('loginUser').value,
+                    password: document.getElementById('loginPass').value
+                })
+            });
+            const data = await res.json();
+            if (!res.ok) return alert(data.detail);
+            window.location.reload();
+        }
+
+        async function logout() {
+            await fetch('/api/logout', { method: 'POST' });
+            window.location.reload();
+        }
+
+        function openRateModal(id, name) {
+            document.getElementById('targetPlayerId').value = id;
+            document.getElementById('rateTitle').innerText = 'Rate ' + name;
+            toggleModal('rateModal', true);
+        }
+
+        async function handleRate(e) {
+            e.preventDefault();
+            const res = await fetch('/api/rate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    rated_player_id: parseInt(document.getElementById('targetPlayerId').value),
+                    batting: parseFloat(document.getElementById('batScore').value),
+                    bowling: parseFloat(document.getElementById('bowlScore').value),
+                    fielding: parseFloat(document.getElementById('fldScore').value)
+                })
+            });
+            const data = await res.json();
+            if (!res.ok) return alert(data.detail);
+            alert(data.message);
+            window.location.reload();
+        }
+
+        async function deleteMember(id, name) {
+            if (!confirm(`Are you sure you want to delete member ${name}?`)) return;
+            const res = await fetch(`/api/admin/member/${id}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (!res.ok) return alert(data.detail);
+            alert(data.message);
+            window.location.reload();
+        }
+
+        async function shuffleTeams() {
+            const res = await fetch('/api/shuffle', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            const data = await res.json();
+            if (!res.ok) return alert(data.detail);
+            currentMatch = data;
+
+            const diffDiv = document.getElementById('diffResult');
+            diffDiv.innerHTML = `
+                <div class="diff-alert" style="background: ${data.diff <= 0.1 ? '#06d6a033' : '#ef476f33'}; color: ${data.diff <= 0.1 ? '#06d6a0' : '#ef476f'};">
+                    Team A Avg: <strong>${data.team_a_avg}</strong> | Team B Avg: <strong>${data.team_b_avg}</strong> | Difference: <strong>${data.diff}</strong> 
+                    (${data.diff <= 0.1 ? '✅ Balanced: Difference &le; 0.10' : '⚠️ Minimal Possible Diff'})
+                </div>
+            `;
+
+            document.getElementById('matchArea').style.display = 'grid';
+            document.getElementById('teamAAvg').innerText = 'Avg: ' + data.team_a_avg;
+            document.getElementById('teamBAvg').innerText = 'Avg: ' + data.team_b_avg;
+
+            const ulA = document.getElementById('teamAPlayers');
+            const selA = document.getElementById('capA');
+            ulA.innerHTML = ''; selA.innerHTML = '';
+            data.team_a.forEach(p => {
+                ulA.innerHTML += `<li>${p.full_name} (Rating: ${p.overall_rating})</li>`;
+                selA.innerHTML += `<option value="${p.id}">${p.full_name}</option>`;
+            });
+
+            const ulB = document.getElementById('teamBPlayers');
+            const selB = document.getElementById('capB');
+            ulB.innerHTML = ''; selB.innerHTML = '';
+            data.team_b.forEach(p => {
+                ulB.innerHTML += `<li>${p.full_name} (Rating: ${p.overall_rating})</li>`;
+                selB.innerHTML += `<option value="${p.id}">${p.full_name}</option>`;
+            });
+
+            document.getElementById('tossArea').style.display = 'block';
+        }
+
+        async function runToss(callChoice) {
+            if (!currentMatch) return;
+            const capAId = document.getElementById('capA').value;
+            const capBId = document.getElementById('capB').value;
+
+            await fetch(`/api/match/${currentMatch.match_id}}/captains`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ team_a_captain_id: capAId, team_b_captain_id: capBId })
+            });
+
+            const res = await fetch(`/api/match/${currentMatch.match_id}/toss`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    calling_captain_id: capAId,
+                    call: callChoice,
+                    decision: "BAT"
+                })
+            });
+            const result = await res.json();
+            document.getElementById('tossBanner').innerHTML = `
+                <div style="color: var(--success); font-weight: bold;">${result.statement}</div>
+            `;
+        }
+
+        loadState();
+    </script>
+</body>
+</html>
