@@ -1,4 +1,4 @@
-﻿import os
+import os
 import json
 import random
 import hashlib
@@ -256,7 +256,12 @@ def get_app_state(request: Request):
     db = SessionLocal()
     current_user = get_current_user(request, db)
     players = db.query(User).filter(User.role == "player", User.is_active == True).all()
-    players_data = [get_player_stats(p, db) for p in players]
+    players_data = [{
+        "id": p.id,
+        "username": p.username,
+        "full_name": p.full_name,
+        "rating_count": db.query(Rating).filter(Rating.rated_player_id == p.id).count()
+    } for p in players]
     user_data = {
         "id": current_user.id,
         "username": current_user.username,
@@ -373,6 +378,9 @@ def shuffle_teams(req: ShuffleReq):
         team_b_avg=result['team_b_avg'],
         avg_diff=result['diff']
     )
+    # Set default captains as first player of each team
+    match.team_a_captain_id = result['team_a'][0]['id']
+    match.team_b_captain_id = result['team_b'][0]['id']
     db.add(match)
     db.commit()
     db.refresh(match)
@@ -380,8 +388,10 @@ def shuffle_teams(req: ShuffleReq):
 
     return {
         "match_id": match.id,
-        "team_a": result['team_a'],
-        "team_b": result['team_b'],
+        "team_a": [{"id": p["id"], "full_name": p["full_name"]} for p in result['team_a']],
+        "team_b": [{"id": p["id"], "full_name": p["full_name"]} for p in result['team_b']],
+        "team_a_captain_id": match.team_a_captain_id,
+        "team_b_captain_id": match.team_b_captain_id,
         "team_a_avg": result['team_a_avg'],
         "team_b_avg": result['team_b_avg'],
         "diff": result['diff'],
@@ -398,8 +408,15 @@ def select_captains(match_id: int, req: CaptainReq):
     match.team_a_captain_id = req.team_a_captain_id
     match.team_b_captain_id = req.team_b_captain_id
     db.commit()
+    
+    cap_a = db.query(User).filter(User.id == req.team_a_captain_id).first()
+    cap_b = db.query(User).filter(User.id == req.team_b_captain_id).first()
     db.close()
-    return {"message": "Captains confirmed."}
+    return {
+        "message": "Captains updated successfully.",
+        "team_a_captain": cap_a.full_name if cap_a else "",
+        "team_b_captain": cap_b.full_name if cap_b else ""
+    }
 
 @app.post("/api/match/{match_id}/toss")
 def execute_toss(match_id: int, req: TossReq):
@@ -408,12 +425,13 @@ def execute_toss(match_id: int, req: TossReq):
     if not match:
         db.close()
         raise HTTPException(status_code=404, detail="Match not found")
-    if not match.team_a_captain_id or not match.team_b_captain_id:
-        db.close()
-        raise HTTPException(status_code=400, detail="Captains must be selected before toss.")
+    
+    # Ensure captains are set
+    calling_cap_id = req.calling_captain_id or match.team_a_captain_id
+    if not calling_cap_id:
+        calling_cap_id = match.team_a_captain_id
 
     coin = random.choice(["HEADS", "TAILS"])
-    calling_cap_id = req.calling_captain_id
     other_cap_id = match.team_b_captain_id if calling_cap_id == match.team_a_captain_id else match.team_a_captain_id
 
     winner_id = calling_cap_id if req.call.upper() == coin else other_cap_id
