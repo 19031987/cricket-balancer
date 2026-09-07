@@ -42,7 +42,7 @@ def test_02_member_login_and_rate_peer():
     assert rate_zero.status_code == 200
     assert "Rating saved" in rate_zero.json()["message"]
 
-def test_03_shuffler_diff_less_than_or_equal_0_1():
+def test_03_shuffler_diff_target_zero():
     res = client.post("/api/shuffle", json={})
     assert res.status_code == 200
     data = res.json()
@@ -50,7 +50,7 @@ def test_03_shuffler_diff_less_than_or_equal_0_1():
     assert len(data["team_b"]) == 6
     diff = data["diff"]
     print(f"\n[E2E Balance Check] Team A Avg: {data['team_a_avg']} | Team B Avg: {data['team_b_avg']} | Diff: {diff}")
-    assert diff <= 0.1, f"Team rating difference {diff} exceeds 0.1!"
+    assert diff == 0.0, f"Team rating difference {diff} is not 0.0!"
 
 def test_04_captain_nomination_toss_and_post_toss_decision():
     shuffle_res = client.post("/api/shuffle", json={})
@@ -190,7 +190,7 @@ def test_09_random_team_a_composition_and_captain_change_persistence():
         s_res = client.post("/api/shuffle", json={})
         assert s_res.status_code == 200
         s_data = s_res.json()
-        assert s_data["diff"] <= 0.1
+        assert s_data["diff"] == 0.0
         team_a_captains.add(s_data["team_a_captain_id"])
         team_a_compositions.add(frozenset(p["id"] for p in s_data["team_a"]))
 

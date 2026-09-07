@@ -130,7 +130,7 @@ def get_player_stats(user: User, db: Session):
         "rating_count": len(ratings)
     }
 
-def balance_12_players(players: List[dict], target_diff: float = 0.10):
+def balance_12_players(players: List[dict], target_diff: float = 0.0):
     if len(players) != 12:
         raise ValueError(f"Exactly 12 players required to balance teams. Given: {len(players)}")
 
@@ -147,15 +147,15 @@ def balance_12_players(players: List[dict], target_diff: float = 0.10):
         team_a = [players[i] for i in a_indices]
         team_b = [players[i] for i in b_indices]
 
-        avg_a = round(sum(p['overall_rating'] for p in team_a) / 6.0, 3)
-        avg_b = round(sum(p['overall_rating'] for p in team_b) / 6.0, 3)
-        diff = round(abs(avg_a - avg_b), 3)
+        avg_a = round(sum(p['overall_rating'] for p in team_a) / 6.0, 1)
+        avg_b = round(sum(p['overall_rating'] for p in team_b) / 6.0, 1)
+        diff = round(abs(avg_a - avg_b), 1)
 
         split_info = {
             "team_a": team_a,
             "team_b": team_b,
-            "team_a_avg": round(avg_a, 2),
-            "team_b_avg": round(avg_b, 2),
+            "team_a_avg": avg_a,
+            "team_b_avg": avg_b,
             "diff": diff,
             "target_met": diff <= target_diff
         }
@@ -163,6 +163,9 @@ def balance_12_players(players: List[dict], target_diff: float = 0.10):
         if diff < min_diff:
             min_diff = diff
             best_split = split_info
+            
+        if diff <= target_diff:
+            valid_splits.append(split_info)
 
     chosen = random.choice(valid_splits) if valid_splits else best_split
     team_a = list(chosen["team_a"])
@@ -477,7 +480,7 @@ def shuffle_teams(req: ShuffleReq):
             db.close()
             raise HTTPException(status_code=400, detail="Exactly 12 valid players must be selected.")
         players_data = [get_player_stats(p, db) for p in players_db]
-        result = balance_12_players(players_data, target_diff=0.10)
+        result = balance_12_players(players_data, target_diff=0.0)
     else:
         all_available = query.all()
         if len(all_available) < 12:
@@ -500,7 +503,7 @@ def shuffle_teams(req: ShuffleReq):
             cand_list = list(candidate)
             random.shuffle(cand_list)
             p_data = [get_player_stats(p, db) for p in cand_list]
-            res = balance_12_players(p_data, target_diff=0.10)
+            res = balance_12_players(p_data, target_diff=0.0)
             if res["diff"] < min_overall_diff:
                 min_overall_diff = res["diff"]
                 best_result = res

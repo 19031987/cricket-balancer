@@ -101,8 +101,8 @@
     <div class="container">
         <!-- 12-Member Balanced Shuffler -->
         <div class="card">
-            <h2>⚖️ 12-Member Team Shuffler (Diff &le; 0.10 Target)</h2>
-            <p style="color: #bbb; margin-bottom: 1rem;">Splits 12 playing members into mathematically balanced Team A vs Team B without revealing individual ratings.</p>
+            <h2>⚖️ 12-Member Team Shuffler (0.0 Rating Difference Target)</h2>
+            <p style="color: #bbb; margin-bottom: 1rem;">Splits 12 playing members into mathematically balanced Team A vs Team B with 0.0 rating difference.</p>
             <button class="btn-primary" onclick="shuffleTeams()" style="font-size: 1.1rem; padding: 0.7rem 1.4rem;">⚡ Shuffle 12 Players</button>
             <div id="diffResult"></div>
 
@@ -508,9 +508,9 @@
             // Display overall balance difference
             const diffDiv = document.getElementById('diffResult');
             diffDiv.innerHTML = `
-                <div class="diff-alert" style="background: ${data.diff <= 0.1 ? '#06d6a033' : '#ef476f33'}; color: ${data.diff <= 0.1 ? '#06d6a0' : '#ef476f'};">
-                    Team Balance Rating Difference: <strong>${data.diff}</strong> 
-                    (${data.diff <= 0.1 ? '✅ Balanced: Difference &le; 0.10' : '⚠️ Minimal Possible Diff'})
+                <div class="diff-alert" style="background: ${data.diff === 0 ? '#06d6a033' : '#ef476f33'}; color: ${data.diff === 0 ? '#06d6a0' : '#ef476f'};">
+                    Team Balance Rating Difference: <strong>${data.diff.toFixed(1)}</strong> 
+                    (${data.diff === 0 ? '✅ Perfectly Balanced: 0.0 Difference' : '⚠️ Minimal Possible Diff: ' + data.diff.toFixed(1)})
                 </div>
             `;
 
