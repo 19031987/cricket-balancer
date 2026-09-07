@@ -491,18 +491,18 @@
             const ulA = document.getElementById('teamAPlayers');
             const selA = document.getElementById('capA');
             ulA.innerHTML = ''; selA.innerHTML = '';
-            data.team_a.forEach((p, idx) => {
+            data.team_a.forEach((p) => {
                 ulA.innerHTML += `<li id="p_a_${p.id}"><span>🏏 ${p.full_name}</span> <span class="badge" id="badge_a_${p.id}">Player</span></li>`;
-                selA.innerHTML += `<option value="${p.id}" ${idx === 0 ? 'selected' : ''}>${p.full_name}</option>`;
+                selA.innerHTML += `<option value="${p.id}" ${p.id === data.team_a_captain_id ? 'selected' : ''}>${p.full_name}</option>`;
             });
 
             // Populate Team B
             const ulB = document.getElementById('teamBPlayers');
             const selB = document.getElementById('capB');
             ulB.innerHTML = ''; selB.innerHTML = '';
-            data.team_b.forEach((p, idx) => {
+            data.team_b.forEach((p) => {
                 ulB.innerHTML += `<li id="p_b_${p.id}"><span>🏏 ${p.full_name}</span> <span class="badge" id="badge_b_${p.id}">Player</span></li>`;
-                selB.innerHTML += `<option value="${p.id}" ${idx === 0 ? 'selected' : ''}>${p.full_name}</option>`;
+                selB.innerHTML += `<option value="${p.id}" ${p.id === data.team_b_captain_id ? 'selected' : ''}>${p.full_name}</option>`;
             });
 
             document.getElementById('tossArea').style.display = 'block';
@@ -518,6 +518,8 @@
             const selB = document.getElementById('capB');
             const capAId = parseInt(selA.value);
             const capBId = parseInt(selB.value);
+            currentMatch.team_a_captain_id = capAId;
+            currentMatch.team_b_captain_id = capBId;
             const capAName = selA.options[selA.selectedIndex]?.text || "Captain A";
             const capBName = selB.options[selB.selectedIndex]?.text || "Captain B";
 
@@ -592,14 +594,15 @@
                 body: JSON.stringify({ team_a_captain_id: capAId, team_b_captain_id: capBId })
             });
 
-            // Call Backend Toss API
+            // Call Backend Toss API with confirmed captains
             const res = await fetch(`/api/match/${currentMatch.match_id}/toss`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     calling_captain_id: capAId,
-                    call: callChoice,
-                    decision: "BAT"
+                    team_a_captain_id: capAId,
+                    team_b_captain_id: capBId,
+                    call: callChoice
                 })
             });
             const result = await res.json();

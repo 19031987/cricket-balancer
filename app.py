@@ -164,12 +164,29 @@ def balance_12_players(players: List[dict], target_diff: float = 0.10):
             min_diff = diff
             best_split = split_info
 
-        if diff <= target_diff:
-            valid_splits.append(split_info)
+    chosen = random.choice(valid_splits) if valid_splits else best_split
+    team_a = list(chosen["team_a"])
+    team_b = list(chosen["team_b"])
+    avg_a = chosen["team_a_avg"]
+    avg_b = chosen["team_b_avg"]
 
-    if valid_splits:
-        return random.choice(valid_splits)
-    return best_split
+    # Randomly swap Team A and Team B with 50% probability so Team A is never anchored
+    if random.choice([True, False]):
+        team_a, team_b = team_b, team_a
+        avg_a, avg_b = avg_b, avg_a
+
+    # Randomly shuffle member order within each team
+    random.shuffle(team_a)
+    random.shuffle(team_b)
+
+    return {
+        "team_a": team_a,
+        "team_b": team_b,
+        "team_a_avg": avg_a,
+        "team_b_avg": avg_b,
+        "diff": chosen["diff"],
+        "target_met": chosen["target_met"]
+    }
 
 def seed_initial_data():
     db = SessionLocal()
@@ -256,9 +273,11 @@ class CaptainReq(BaseModel):
     team_b_captain_id: int
 
 class TossReq(BaseModel):
-    calling_captain_id: int
+    calling_captain_id: Optional[int] = None
+    team_a_captain_id: Optional[int] = None
+    team_b_captain_id: Optional[int] = None
     call: str
-    decision: str = "BAT"
+    decision: Optional[str] = "BAT"
 
 class AvailabilityReq(BaseModel):
     is_available: bool
@@ -455,15 +474,26 @@ def shuffle_teams(req: ShuffleReq):
     if req.selected_ids and len(req.selected_ids) == 12:
         players_db = query.filter(User.id.in_(req.selected_ids)).all()
     else:
-        players_db = query.limit(12).all()
+        all_available = query.all()
+        if len(all_available) >= 12:
+            players_db = random.sample(all_available, 12)
+        else:
+            players_db = all_available
 
     if len(players_db) != 12:
         available_count = query.count()
         db.close()
         raise HTTPException(status_code=400, detail=f"12 available players are required to shuffle. Currently available: {available_count}. Please mark at least 12 players as Available.")
 
+    # Randomize order of players
+    random.shuffle(players_db)
+
     players_data = [get_player_stats(p, db) for p in players_db]
     result = balance_12_players(players_data, target_diff=0.10)
+
+    # Randomly pick initial captain for Team A and Team B
+    cap_a = random.choice(result['team_a'])
+    cap_b = random.choice(result['team_b'])
 
     match = Match(
         team_a_players=json.dumps([p['id'] for p in result['team_a']]),
@@ -472,9 +502,8 @@ def shuffle_teams(req: ShuffleReq):
         team_b_avg=result['team_b_avg'],
         avg_diff=result['diff']
     )
-    # Set default captains as first player of each team
-    match.team_a_captain_id = result['team_a'][0]['id']
-    match.team_b_captain_id = result['team_b'][0]['id']
+    match.team_a_captain_id = cap_a['id']
+    match.team_b_captain_id = cap_b['id']
     db.add(match)
     db.commit()
     db.refresh(match)
@@ -520,14 +549,24 @@ def execute_toss(match_id: int, req: TossReq):
         db.close()
         raise HTTPException(status_code=404, detail="Match not found")
     
-    # Ensure captains are set
-    calling_cap_id = req.calling_captain_id or match.team_a_captain_id
-    if not calling_cap_id:
-        calling_cap_id = match.team_a_captain_id
+    # Synchronize captains from the request if provided
+    if req.team_a_captain_id:
+        match.team_a_captain_id = req.team_a_captain_id
+    if req.team_b_captain_id:
+        match.team_b_captain_id = req.team_b_captain_id
+
+    cap_a_id = match.team_a_captain_id
+    cap_b_id = match.team_b_captain_id
+
+    calling_cap_id = req.calling_captain_id or cap_a_id
+    
+    # Identify opponent captain properly
+    if calling_cap_id == cap_a_id:
+        other_cap_id = cap_b_id
+    else:
+        other_cap_id = cap_a_id
 
     coin = random.choice(["HEADS", "TAILS"])
-    other_cap_id = match.team_b_captain_id if calling_cap_id == match.team_a_captain_id else match.team_a_captain_id
-
     winner_id = calling_cap_id if req.call.upper() == coin else other_cap_id
     winner = db.query(User).filter(User.id == winner_id).first()
     winner_name = winner.full_name if winner else "Captain"

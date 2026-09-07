@@ -171,3 +171,47 @@ def test_08_admin_delete_member():
         del_res = client.delete(f"/api/admin/member/{target_id}")
         assert del_res.status_code == 200
         assert "deleted successfully" in del_res.json()["message"]
+
+def test_09_random_team_a_composition_and_captain_change_persistence():
+    # 1. Verify Team A composition and initial captains are random across multiple shuffles
+    team_a_captains = set()
+    team_a_compositions = set()
+    for _ in range(10):
+        s_res = client.post("/api/shuffle", json={})
+        assert s_res.status_code == 200
+        s_data = s_res.json()
+        assert s_data["diff"] <= 0.1
+        team_a_captains.add(s_data["team_a_captain_id"])
+        team_a_compositions.add(frozenset(p["id"] for p in s_data["team_a"]))
+
+    # Must have multiple distinct captains and compositions across 10 shuffles
+    assert len(team_a_captains) > 1, f"Team A captain is stuck on: {team_a_captains}"
+    assert len(team_a_compositions) > 1, "Team A composition is never changing!"
+
+    # 2. Verify changing Team A captain persists through toss without reverting
+    s_res = client.post("/api/shuffle", json={})
+    s_data = s_res.json()
+    match_id = s_data["match_id"]
+    team_a = s_data["team_a"]
+    team_b = s_data["team_b"]
+
+    new_cap_a = team_a[1]["id"]
+    new_cap_b = team_b[1]["id"]
+
+    cap_res = client.post(f"/api/match/{match_id}/captains", json={
+        "team_a_captain_id": new_cap_a,
+        "team_b_captain_id": new_cap_b
+    })
+    assert cap_res.status_code == 200
+
+    toss_res = client.post(f"/api/match/{match_id}/toss", json={
+        "calling_captain_id": new_cap_a,
+        "team_a_captain_id": new_cap_a,
+        "team_b_captain_id": new_cap_b,
+        "call": "HEADS"
+    })
+    assert toss_res.status_code == 200
+    toss_data = toss_res.json()
+
+    assert toss_data["winner_id"] in [new_cap_a, new_cap_b]
+    assert toss_data["winner_name"] in [team_a[1]["full_name"], team_b[1]["full_name"]]
