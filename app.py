@@ -12,7 +12,7 @@ import uvicorn
 from fastapi import FastAPI, Request, Response, HTTPException, Depends, status
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey, DateTime, Boolean
+from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey, DateTime, Boolean, text
 from sqlalchemy.orm import declarative_base, sessionmaker, Session, relationship
 from jose import jwt, JWTError
 
@@ -33,6 +33,7 @@ class User(Base):
     full_name = Column(String, nullable=False)
     role = Column(String, default="player")
     is_active = Column(Boolean, default=True)
+    is_available = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     ratings_received = relationship("Rating", foreign_keys="Rating.rated_player_id", cascade="all, delete-orphan")
     ratings_given = relationship("Rating", foreign_keys="Rating.rater_id", cascade="all, delete-orphan")
@@ -62,6 +63,14 @@ class Match(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 Base.metadata.create_all(bind=engine)
+
+# Safe SQLite schema migration for is_available
+try:
+    with engine.connect() as conn:
+        conn.execute(text("ALTER TABLE users ADD COLUMN is_available BOOLEAN DEFAULT 1"))
+        conn.commit()
+except Exception:
+    pass
 
 def hash_pw(pw: str) -> str:
     salt = secrets.token_hex(16)
@@ -251,6 +260,12 @@ class TossReq(BaseModel):
     call: str
     decision: str = "BAT"
 
+class AvailabilityReq(BaseModel):
+    is_available: bool
+
+class DecisionReq(BaseModel):
+    decision: str
+
 @app.get("/api/state")
 def get_app_state(request: Request):
     db = SessionLocal()
@@ -260,6 +275,7 @@ def get_app_state(request: Request):
         "id": p.id,
         "username": p.username,
         "full_name": p.full_name,
+        "is_available": getattr(p, "is_available", True),
         "rating_count": db.query(Rating).filter(Rating.rated_player_id == p.id).count()
     } for p in players]
     user_data = {
@@ -270,6 +286,29 @@ def get_app_state(request: Request):
     } if current_user else None
     db.close()
     return {"current_user": user_data, "players": players_data}
+
+@app.post("/api/member/{user_id}/availability")
+def toggle_availability(user_id: int, req: AvailabilityReq, request: Request):
+    db = SessionLocal()
+    current_user = get_current_user(request, db)
+    if not current_user:
+        db.close()
+        raise HTTPException(status_code=401, detail="Please login first.")
+    if current_user.role != "admin" and current_user.id != user_id:
+        db.close()
+        raise HTTPException(status_code=403, detail="You can only toggle your own availability.")
+    
+    target = db.query(User).filter(User.id == user_id).first()
+    if not target:
+        db.close()
+        raise HTTPException(status_code=404, detail="Member not found.")
+    
+    target.is_available = req.is_available
+    name = target.full_name
+    db.commit()
+    db.close()
+    status_str = "Available" if req.is_available else "Unavailable"
+    return {"message": f"{name} is now marked as {status_str}.", "is_available": req.is_available}
 
 @app.post("/api/login")
 def login(req: LoginReq, response: Response):
@@ -412,15 +451,16 @@ def rate_player(req: RateReq, request: Request):
 @app.post("/api/shuffle")
 def shuffle_teams(req: ShuffleReq):
     db = SessionLocal()
-    query = db.query(User).filter(User.role == "player", User.is_active == True)
+    query = db.query(User).filter(User.role == "player", User.is_active == True, User.is_available == True)
     if req.selected_ids and len(req.selected_ids) == 12:
         players_db = query.filter(User.id.in_(req.selected_ids)).all()
     else:
         players_db = query.limit(12).all()
 
     if len(players_db) != 12:
+        available_count = query.count()
         db.close()
-        raise HTTPException(status_code=400, detail=f"12 players must be selected. Selected: {len(players_db)}")
+        raise HTTPException(status_code=400, detail=f"12 available players are required to shuffle. Currently available: {available_count}. Please mark at least 12 players as Available.")
 
     players_data = [get_player_stats(p, db) for p in players_db]
     result = balance_12_players(players_data, target_diff=0.10)
@@ -490,19 +530,43 @@ def execute_toss(match_id: int, req: TossReq):
 
     winner_id = calling_cap_id if req.call.upper() == coin else other_cap_id
     winner = db.query(User).filter(User.id == winner_id).first()
+    winner_name = winner.full_name if winner else "Captain"
 
     match.toss_winner_id = winner_id
-    match.toss_decision = req.decision.upper()
+    match.toss_decision = None # DO NOT preselect bat or bowl!
     db.commit()
-
-    statement = f"Coin showed {coin}! Captain {winner.full_name} won the toss and elected to {req.decision.upper()} first!"
     db.close()
+
+    statement = f"Coin showed {coin}! Captain {winner_name} won the toss!"
     return {
         "coin": coin,
         "winner_id": winner_id,
-        "winner_name": winner.full_name,
-        "decision": req.decision.upper(),
+        "winner_name": winner_name,
+        "decision": None,
         "statement": statement
+    }
+
+@app.post("/api/match/{match_id}/decision")
+def set_toss_decision(match_id: int, req: DecisionReq):
+    db = SessionLocal()
+    match = db.query(Match).filter(Match.id == match_id).first()
+    if not match:
+        db.close()
+        raise HTTPException(status_code=404, detail="Match not found")
+    if not match.toss_winner_id:
+        db.close()
+        raise HTTPException(status_code=400, detail="Please execute the toss first.")
+    
+    winner = db.query(User).filter(User.id == match.toss_winner_id).first()
+    winner_name = winner.full_name if winner else "Captain"
+    decision = req.decision.upper()
+    match.toss_decision = decision
+    db.commit()
+    db.close()
+    return {
+        "message": f"Captain {winner_name} elected to {decision} first!",
+        "winner_name": winner_name,
+        "decision": decision
     }
 
 @app.get("/", response_class=HTMLResponse)

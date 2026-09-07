@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -159,6 +159,15 @@
 
                 <!-- Toss Result Banner -->
                 <div id="tossBanner" style="margin-top: 1.5rem; font-size: 1.15rem;"></div>
+
+                <!-- Post-Toss Decision Section (Captain chooses BAT or BOWL) -->
+                <div id="tossDecisionSection" style="display: none; margin-top: 1.2rem; text-align: center; background: #0f172a; border: 2px dashed var(--accent); padding: 1.2rem; border-radius: 10px;">
+                    <div id="tossDecisionPrompt" style="font-weight: bold; margin-bottom: 0.8rem; font-size: 1.15rem; color: #f1f5f9;"></div>
+                    <div style="display: flex; justify-content: center; gap: 1.2rem;">
+                        <button class="btn-primary" style="padding: 0.7rem 1.8rem; font-size: 1.1rem;" onclick="makeTossDecision('BAT')">🏏 Choose BAT First</button>
+                        <button class="btn-success" style="padding: 0.7rem 1.8rem; font-size: 1.1rem;" onclick="makeTossDecision('BOWL')">⚾ Choose BOWL First</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -166,8 +175,11 @@
         <div class="card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                 <div>
-                    <h2>👥 Member Roster & Peer Ratings</h2>
-                    <p style="color: #94a3b8;">Player performance averages are kept confidential for team balancing.</p>
+                    <h2 style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                        👥 Member Roster & Peer Ratings
+                        <span id="availCountBadge" class="badge" style="background:#06d6a0; color:#0f172a; font-size: 0.85rem;">12 Available</span>
+                    </h2>
+                    <p style="color: #94a3b8;">Mark player availability for match shuffling. Individual performance averages are kept confidential.</p>
                 </div>
                 <div id="adminActionArea"></div>
             </div>
@@ -278,19 +290,39 @@
         function renderRoster() {
             const roster = document.getElementById('roster');
             roster.innerHTML = '';
+
+            const availCount = players.filter(p => p.is_available !== false).length;
+            const availBadge = document.getElementById('availCountBadge');
+            if (availBadge) {
+                availBadge.innerText = `${availCount} / ${players.length} Available`;
+                availBadge.style.background = availCount >= 12 ? '#06d6a0' : '#ef476f';
+                availBadge.style.color = '#0f172a';
+            }
+
             players.forEach(p => {
                 const canRate = currentUser && currentUser.role === 'player' && currentUser.id !== p.id;
                 const isAdmin = currentUser && currentUser.role === 'admin';
+                const isAvail = p.is_available !== false;
                 roster.innerHTML += `
-                    <div class="p-card">
+                    <div class="p-card" style="border-top: 3px solid ${isAvail ? 'var(--success)' : '#ef476f'};">
                         <div>
                             <div style="display:flex; justify-content:space-between; align-items:center;">
                                 <h4>🏏 ${p.full_name}</h4>
-                                <span class="badge">Playing Member</span>
+                                <span class="badge" style="background: ${isAvail ? '#06d6a033' : '#ef476f33'}; color: ${isAvail ? 'var(--success)' : '#ef476f'};">
+                                    ${isAvail ? '🟢 Available' : '🔴 Unavailable'}
+                                </span>
                             </div>
                             <div style="margin: 0.8rem 0; font-size: 0.9rem; color: #94a3b8;">
                                 <div>Username: <code>${p.username}</code></div>
                                 <div>Peer reviews: <strong>${p.rating_count} member(s)</strong></div>
+                            </div>
+                            <!-- Availability Action -->
+                            <div style="margin: 0.6rem 0; display: flex; align-items: center; justify-content: space-between; background: #0f172a; padding: 0.4rem 0.6rem; border-radius: 6px;">
+                                <span style="font-size: 0.85rem; color: #94a3b8;">Match Status:</span>
+                                <button onclick="togglePlayerAvailability(${p.id}, ${!isAvail})" 
+                                        style="cursor: pointer; padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.8rem; font-weight: bold; background: ${isAvail ? '#ef476f22' : '#06d6a022'}; color: ${isAvail ? '#ef476f' : '#06d6a0'}; border: 1px solid ${isAvail ? '#ef476f' : '#06d6a0'};">
+                                    ${isAvail ? 'Mark Unavailable ✖' : 'Mark Available ✔'}
+                                </button>
                             </div>
                         </div>
                         <div style="margin-top: 0.8rem; display: flex; flex-wrap: wrap; gap: 0.4rem;">
@@ -303,6 +335,17 @@
                     </div>
                 `;
             });
+        }
+
+        async function togglePlayerAvailability(userId, isAvail) {
+            const res = await fetch(`/api/member/${userId}/availability`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_available: isAvail })
+            });
+            const data = await res.json();
+            if (!res.ok) return alert(data.detail || "Failed to update availability");
+            await loadState();
         }
 
         function toggleModal(id, show) {
@@ -464,6 +507,7 @@
 
             document.getElementById('tossArea').style.display = 'block';
             document.getElementById('tossBanner').innerHTML = '';
+            document.getElementById('tossDecisionSection').style.display = 'none';
             await onCaptainChange();
         }
 
@@ -579,8 +623,32 @@
                         🏆 ${result.statement}
                     </div>
                 `;
+                // Reveal decision buttons for winning captain - DO NOT auto pick bat or bowl
+                const decisionSection = document.getElementById('tossDecisionSection');
+                const promptEl = document.getElementById('tossDecisionPrompt');
+                promptEl.innerHTML = `🏆 Captain <strong>${result.winner_name}</strong>, please choose your match strategy:`;
+                decisionSection.style.display = 'block';
                 isFlipping = false;
             }, 2200);
+        }
+
+        async function makeTossDecision(choice) {
+            if (!currentMatch) return;
+            const res = await fetch(`/api/match/${currentMatch.match_id}/decision`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ decision: choice })
+            });
+            const data = await res.json();
+            if (!res.ok) return alert(data.detail || "Decision failed");
+            
+            document.getElementById('tossDecisionSection').style.display = 'none';
+            const banner = document.getElementById('tossBanner');
+            banner.innerHTML += `
+                <div style="margin-top: 1rem; background: #ffd16622; border: 2px solid var(--accent); padding: 1rem; border-radius: 10px; color: var(--accent); font-weight: bold; font-size: 1.2rem;">
+                    🏏 Match Update: Captain <strong>${data.winner_name}</strong> elected to <strong>${data.decision}</strong> first!
+                </div>
+            `;
         }
 
         loadState();
