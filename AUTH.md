@@ -59,6 +59,14 @@ Across previous iterations, Google OAuth repeatedly broke whenever authenticatio
 * **Failure**: Removing modal markup (`googleConfigModal`, `inputGoogleClientId`, `btnSaveGoogleConfig`) or JavaScript callbacks (`handleGoogleAccessToken`, `googleTokenClient`) breaks the automated CI/CD test suites (`test_google_and_register_auth.js`, `test_google_sso_ui.js`).
 * **Rule**: All test-required DOM elements and handler functions must remain present and functional.
 
+### Cause 7: The "deleted_client" Trap (Error 401: deleted_client)
+* **What Happened**: The old Client ID `665867492986-i93mav5ld0gtld6c00vaeql8quakcmcp.apps.googleusercontent.com` was deleted in Google Cloud Console.
+* **Why It Kept Recurring**: Repeated fixes accidentally re-inserted this deleted Client ID as the default value in `.env`, `main.py`, `auth_service.py`, and `login.html`. When clicked, Google's servers rejected it with `Error 401: deleted_client`.
+* **Permanent Resolution**:
+  1. `665867492986...` and deleted IDs are permanently blacklisted in `DELETED_GOOGLE_CLIENT_IDS` across frontend and backend.
+  2. The application never attempts to launch Google's popup with a deleted Client ID.
+  3. Instead, `#googleConfigModal` opens cleanly to let the administrator configure an active Client ID, while prominently providing "Continue as Guest Student" so users are never blocked.
+
 ---
 
 ## 2. Authentication Architecture
