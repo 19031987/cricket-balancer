@@ -182,3 +182,29 @@
   - `tests/test_google_sso.py`: 8/8 tests passed (including admin config gating, CSRF validation, and redirect callback).
   - `tests/test_public_gmail_auth.py`: 3/3 tests passed.
   - `tests/test_fix_plan_verification.py`: 13/13 tests passed.
+
+---
+
+## Phase 8: Prevention of Recurring OAuth Regressions & Single Source of Truth
+
+### Root Causes of Repeated OAuth Breakages
+1. **Desynchronization of Dual Files**: `login.html` and `static/login.html` were modified independently during iterative fixes. When HF Spaces or static CDNs loaded `static/login.html`, outdated auth scripts ran.
+2. **Audience Discrepancies (`GOOGLE_CLIENT_ID`)**: Discrepancies between frontend and backend client IDs caused `google.oauth2.id_token.verify_oauth2_token()` audience validation to fail.
+3. **GIS Flow Conflicts (Brave Shields vs Popup vs Redirect)**: When trying to fix Brave/ad-blocker issues, developers inadvertently stripped required elements (`googleConfigModal`, `googleTokenClient`, `initTokenClient`), breaking standard browsers and CI test suites.
+4. **Session Storage Inconsistencies & Redirect Bounce**: Incomplete persistence across `localStorage` and `sessionStorage` caused `index.html` to treat valid users as unauthenticated and bounce back to `login.html`.
+
+### Implementation & Hardening
+1. **Synchronized Frontend**: Re-aligned `login.html` and `static/login.html` to be 100% byte-for-byte identical.
+2. **Preserved Multi-Tier OAuth Architecture**:
+   - Primary: Official Google Identity Services button in `#googleGsiWrapper`.
+   - Secondary: OAuth 2.0 popup token client (`googleTokenClient.requestAccessToken`) with `handleGoogleAccessToken`.
+   - Tertiary: Server-side redirect callback (`/api/auth/google/callback`) with CSRF verification.
+   - Diagnostic Modal: Restored `#googleConfigModal` for client ID configuration and origin checking.
+   - Fallback: Guest student login (`/api/auth/guest`) and username/password authentication for environments blocking Google scripts entirely.
+3. **Dedicated Documentation**: Created `maths_english_rag/AUTHENTICATION.md` containing the definitive architecture, checklist, and verification procedures.
+4. **Automated Verification**:
+   - `test_google_and_register_auth.js`: 7/7 passed.
+   - `test_google_sso_ui.js`: 8/8 passed.
+   - `test_fix_google_auth_and_single_button.js`: 5/5 passed.
+   - `test_logout_login_home_navigation.js`: 8/8 passed.
+   - `pytest` (`test_google_sso.py`, `test_public_gmail_auth.py`, `test_fix_plan_verification.py`): 24/24 passed.
